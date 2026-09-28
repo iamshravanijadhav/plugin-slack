@@ -1,0 +1,8 @@
+group: io.kestra.plugin.slack.app.views
+name: "views"
+title: "Slack Views"
+description: "Tasks that open Slack modals and publish Slack App Home views."
+body: "Use the Slack App bot `token` with a valid `triggerId` and view JSON to open modals, or a `userId`, view JSON, and optional hash to publish an App Home view."
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"

@@ -220,6 +220,20 @@ public class FakeWebhookController {
     public HttpResponse<?> mockPost(HttpRequest<?> request, String method, @Body String data) {
         FakeWebhookController.data = data;
 
+        // Mock views.open and views.publish responses
+        if (method.equals("views.open") || method.equals("views.publish")) {
+            return HttpResponse.ok(
+                convertToSlack(
+                    Map.of(
+                        "ok", true,
+                        "view", Map.of(
+                            "id", "V1234567890",
+                            "hash", "hash123"
+                        )
+                    )
+                )
+            );
+        }
         // Mock canvas method responses
         if (method.contains("canvases")) {
             if (method.contains("create") && !method.contains("conversations")) {
