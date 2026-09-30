@@ -2,7 +2,7 @@ group: io.kestra.plugin.slack
 name: "slack"
 title: "Slack"
 description: "Slack notification webhooks and full Slack App automations across chat, files, canvases, channels, reactions, users, and events."
-body: "Use either an incoming webhook `url` (https://hooks.slack.com/...) for lightweight notifications or a Slack App `token` (xoxb) plus optional `signingSecret` to run chat, conversations, files, canvases, reactions, and user tasks or trigger flows from the Event API. Supports threaded updates, streaming message sessions, channel lifecycle management, file uploads/cleanup, canvas authoring, reaction-based approvals, user lookups, and reusable output models for downstream steps."
+body: "Use either an incoming webhook `url` (https://hooks.slack.com/...) for lightweight notifications or a Slack App `token` (xoxb) plus optional `signingSecret` to run chat, conversations, files, canvases, reactions, and user tasks or trigger flows from the Event API. Supports threaded updates, streaming message sessions, channel lifecycle management, file uploads/cleanup, canvas authoring, views, modals, App Home publishing, reaction-based approvals, user lookups, and reusable output models for downstream steps."
 videos: []
 createdBy: "Kestra Core Team"
 managedBy: "Kestra Core Team"

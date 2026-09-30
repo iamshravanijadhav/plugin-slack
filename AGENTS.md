@@ -68,6 +68,8 @@ Infrastructure dependencies (Docker Compose services):
 - `io.kestra.plugin.slack.app.users.List`
 - `io.kestra.plugin.slack.app.users.LookupByEmail`
 - `io.kestra.plugin.slack.app.users.ProfileGet`
+- `io.kestra.plugin.slack.app.views.Open`
+- `io.kestra.plugin.slack.app.views.Publish`
 - `io.kestra.plugin.slack.notifications.SlackExecution`
 - `io.kestra.plugin.slack.notifications.SlackIncomingWebhook`
 

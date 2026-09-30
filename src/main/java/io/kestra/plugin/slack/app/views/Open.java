@@ -44,7 +44,7 @@ import lombok.extern.jackson.Jacksonized;
                   - id: open_view
                     type: io.kestra.plugin.slack.app.views.Open
                     token: "{{ secret('SLACK_TOKEN') }}"
-                    triggerId: "{{ triggerId }}"
+                    triggerId: "{{ trigger.body.trigger_id }}"
                     view: |
                       {
                         "type": "modal",
@@ -90,8 +90,8 @@ public class Open extends AbstractSlackClientConnection implements RunnableTask<
     @Override
     public Output run(RunContext runContext) throws Exception {
         ViewsOpenRequest request = ViewsOpenRequest.builder()
-            .triggerId(runContext.render(this.triggerId).as(String.class).orElseThrow())
-            .viewAsString(runContext.render(this.view).as(String.class).orElseThrow())
+            .triggerId(runContext.render(this.triggerId).as(String.class).orElseThrow(() -> new IllegalArgumentException("'triggerId' rendered to an empty value")))
+            .viewAsString(runContext.render(this.view).as(String.class).orElseThrow(() -> new IllegalArgumentException("'view' rendered to an empty value")))
             .build();
 
         ViewsOpenResponse response = call(runContext, client -> client.viewsOpen(request));

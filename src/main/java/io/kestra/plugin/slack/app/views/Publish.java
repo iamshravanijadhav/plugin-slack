@@ -1,7 +1,6 @@
 package io.kestra.plugin.slack.app.views;
 
 import com.slack.api.methods.request.views.ViewsPublishRequest;
-import com.slack.api.methods.response.views.ViewsPublishResponse;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
@@ -80,8 +79,8 @@ public class Publish extends AbstractSlackClientConnection implements RunnableTa
     private Property<String> view;
 
     @Schema(
-        title = "View hash",
-        description = "Optional hash of the previous view to prevent publishing an outdated view."
+        title = "View hash to prevent concurrent overwrites",
+        description = "Optional hash of the previous view to prevent overwriting changes made concurrently."
     )
     @PluginProperty(group = "advanced")
     private Property<String> hash;
@@ -89,18 +88,23 @@ public class Publish extends AbstractSlackClientConnection implements RunnableTa
     @Override
     public Output run(RunContext runContext) throws Exception {
         var builder = ViewsPublishRequest.builder()
-            .userId(runContext.render(this.userId).as(String.class).orElseThrow())
-            .viewAsString(runContext.render(this.view).as(String.class).orElseThrow());
+            .userId(runContext.render(this.userId).as(String.class).orElseThrow(() -> new IllegalArgumentException("'userId' rendered to an empty value")))
+            .viewAsString(runContext.render(this.view).as(String.class).orElseThrow(() -> new IllegalArgumentException("'view' rendered to an empty value")));
 
         if (this.hash != null) {
             runContext.render(this.hash).as(String.class).ifPresent(builder::hash);
         }
 
-        ViewsPublishResponse response = call(runContext, client -> client.viewsPublish(builder.build()));
+        var response = call(runContext, client -> client.viewsPublish(builder.build()));
+        var view = response.getView();
+
+        if (view == null) {
+            throw new IllegalStateException("Slack returned no view in the publish response");
+        }
 
         return Output.builder()
-            .viewId(response.getView().getId())
-            .hash(response.getView().getHash())
+            .viewId(view.getId())
+            .hash(view.getHash())
             .build();
     }
 

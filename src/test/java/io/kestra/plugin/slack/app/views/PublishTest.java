@@ -15,6 +15,7 @@ import io.kestra.plugin.slack.app.AbstractSlackClientTest;
 import jakarta.inject.Inject;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @KestraTest
 public class PublishTest extends AbstractSlackClientTest {
@@ -29,6 +30,7 @@ public class PublishTest extends AbstractSlackClientTest {
             .methodsEndpointUrlPrefix(this.client())
             .token(Property.ofValue("token"))
             .userId(Property.ofValue("U1234567890"))
+            .hash(Property.ofValue("hash123"))
             .view(Property.ofValue("""
                 {
                   "type": "home",
@@ -53,6 +55,27 @@ public class PublishTest extends AbstractSlackClientTest {
         assertThat(output.getViewId()).isEqualTo("V1234567890");
         assertThat(output.getHash()).isEqualTo("hash123");
         assertThat(FakeWebhookController.data).contains("user_id=U1234567890");
+        assertThat(FakeWebhookController.data).contains("hash=hash123");
         assertThat(FakeWebhookController.data).contains("view=");
+    }
+
+    @Test
+    void failsWhenSlackReturnsError() throws Exception {
+        Publish task = Publish.builder()
+            .id(IdUtils.create())
+            .type(Publish.class.getName())
+            .methodsEndpointUrlPrefix(this.client())
+            .token(Property.ofValue("token"))
+            .userId(Property.ofValue("U1234567890"))
+            .view(Property.ofValue("force_error"))
+            .build();
+
+        assertThatThrownBy(
+            () -> task.run(
+                TestsUtils.mockRunContext(runContextFactory, task, Map.of())
+            )
+        )
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("invalid_view");
     }
 }

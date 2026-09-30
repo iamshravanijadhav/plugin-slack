@@ -222,6 +222,9 @@ public class FakeWebhookController {
 
         // Mock views.open and views.publish responses
         if (method.equals("views.open") || method.equals("views.publish")) {
+            if (data.contains("force_error")) {
+                return HttpResponse.ok(convertToSlack(Map.of("ok", false, "error", "invalid_view")));
+            }
             return HttpResponse.ok(
                 convertToSlack(
                     Map.of(
