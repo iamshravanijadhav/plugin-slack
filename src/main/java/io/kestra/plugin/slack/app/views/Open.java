@@ -1,7 +1,6 @@
 package io.kestra.plugin.slack.app.views;
 
 import com.slack.api.methods.request.views.ViewsOpenRequest;
-import com.slack.api.methods.response.views.ViewsOpenResponse;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
@@ -90,15 +89,22 @@ public class Open extends AbstractSlackClientConnection implements RunnableTask<
     @Override
     public Output run(RunContext runContext) throws Exception {
         ViewsOpenRequest request = ViewsOpenRequest.builder()
-            .triggerId(runContext.render(this.triggerId).as(String.class).orElseThrow(() -> new IllegalArgumentException("'triggerId' rendered to an empty value")))
+            .triggerId(
+                runContext.render(this.triggerId).as(String.class).filter(value -> !value.isBlank()).orElseThrow(() -> new IllegalArgumentException("'triggerId' rendered to an empty value"))
+            )
             .viewAsString(runContext.render(this.view).as(String.class).orElseThrow(() -> new IllegalArgumentException("'view' rendered to an empty value")))
             .build();
 
-        ViewsOpenResponse response = call(runContext, client -> client.viewsOpen(request));
+        var response = call(runContext, client -> client.viewsOpen(request));
+        var view = response.getView();
+
+        if (view == null) {
+            throw new IllegalStateException("Slack returned no view in the open response");
+        }
 
         return Output.builder()
-            .viewId(response.getView().getId())
-            .hash(response.getView().getHash())
+            .viewId(view.getId())
+            .hash(view.getHash())
             .build();
     }
 
