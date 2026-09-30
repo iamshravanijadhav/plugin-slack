@@ -1,5 +1,7 @@
 package io.kestra.plugin.slack.app.views;
 
+import java.util.Map;
+
 import com.slack.api.methods.request.views.ViewsOpenRequest;
 
 import io.kestra.core.models.annotations.Example;
@@ -8,18 +10,16 @@ import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
+import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.plugin.slack.AbstractSlackClientConnection;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
-import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-import lombok.Value;
 import lombok.experimental.SuperBuilder;
-import lombok.extern.jackson.Jacksonized;
 
 @SuperBuilder
 @ToString
@@ -44,32 +44,24 @@ import lombok.extern.jackson.Jacksonized;
                     type: io.kestra.plugin.slack.app.views.Open
                     token: "{{ secret('SLACK_TOKEN') }}"
                     triggerId: "{{ trigger.body.trigger_id }}"
-                    view: |
-                      {
-                        "type": "modal",
-                        "title": {
-                          "type": "plain_text",
-                          "text": "Hello"
-                        },
-                        "close": {
-                          "type": "plain_text",
-                          "text": "Close"
-                        },
-                        "blocks": [
-                          {
-                            "type": "section",
-                            "text": {
-                              "type": "mrkdwn",
-                              "text": "Hello from Kestra!"
-                            }
-                          }
-                        ]
-                      }
+                    view:
+                      type: modal
+                      title:
+                        type: plain_text
+                        text: Hello
+                      close:
+                        type: plain_text
+                        text: Close
+                      blocks:
+                        - type: section
+                          text:
+                            type: mrkdwn
+                            text: Hello from Kestra!
                 """
         )
     }
 )
-public class Open extends AbstractSlackClientConnection implements RunnableTask<Open.Output> {
+public class Open extends AbstractSlackClientConnection implements RunnableTask<ViewOutput> {
     @Schema(
         title = "Slack trigger ID",
         description = "Trigger ID returned by Slack when opening a modal."
@@ -84,40 +76,18 @@ public class Open extends AbstractSlackClientConnection implements RunnableTask<
     )
     @NotNull
     @PluginProperty(group = "main")
-    private Property<String> view;
+    private Property<Map<String, Object>> view;
 
     @Override
-    public Output run(RunContext runContext) throws Exception {
-        ViewsOpenRequest request = ViewsOpenRequest.builder()
+    public ViewOutput run(RunContext runContext) throws Exception {
+        var request = ViewsOpenRequest.builder()
             .triggerId(
                 runContext.render(this.triggerId).as(String.class).filter(value -> !value.isBlank()).orElseThrow(() -> new IllegalArgumentException("'triggerId' rendered to an empty value"))
             )
-            .viewAsString(runContext.render(this.view).as(String.class).orElseThrow(() -> new IllegalArgumentException("'view' rendered to an empty value")))
+            .viewAsString(JacksonMapper.ofJson().writeValueAsString(runContext.render(this.view).asMap(String.class, Object.class)))
             .build();
 
         var response = call(runContext, client -> client.viewsOpen(request));
-        var view = response.getView();
-
-        if (view == null) {
-            throw new IllegalStateException("Slack returned no view in the open response");
-        }
-
-        return Output.builder()
-            .viewId(view.getId())
-            .hash(view.getHash())
-            .build();
-    }
-
-    @Value
-    @Builder
-    @Jacksonized
-    public static class Output implements io.kestra.core.models.tasks.Output {
-        @Schema(title = "View ID")
-        @PluginProperty
-        String viewId;
-
-        @Schema(title = "View hash")
-        @PluginProperty
-        String hash;
+        return ViewOutput.from(response.getView());
     }
 }

@@ -1,5 +1,7 @@
 package io.kestra.plugin.slack.app.views;
 
+import java.util.Map;
+
 import com.slack.api.methods.request.views.ViewsPublishRequest;
 
 import io.kestra.core.models.annotations.Example;
@@ -8,18 +10,16 @@ import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
+import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.plugin.slack.AbstractSlackClientConnection;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
-import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-import lombok.Value;
 import lombok.experimental.SuperBuilder;
-import lombok.extern.jackson.Jacksonized;
 
 @SuperBuilder
 @ToString
@@ -44,24 +44,18 @@ import lombok.extern.jackson.Jacksonized;
                     type: io.kestra.plugin.slack.app.views.Publish
                     token: "{{ secret('SLACK_TOKEN') }}"
                     userId: "U1234567890"
-                    view: |
-                      {
-                        "type": "home",
-                        "blocks": [
-                          {
-                            "type": "section",
-                            "text": {
-                              "type": "mrkdwn",
-                              "text": "Welcome to the Home tab!"
-                            }
-                          }
-                        ]
-                      }
+                    view:
+                      type: home
+                      blocks:
+                        - type: section
+                          text:
+                            type: mrkdwn
+                            text: Welcome to the Home tab!
                 """
         )
     }
 )
-public class Publish extends AbstractSlackClientConnection implements RunnableTask<Publish.Output> {
+public class Publish extends AbstractSlackClientConnection implements RunnableTask<ViewOutput> {
     @Schema(
         title = "Slack user ID",
         description = "Slack user ID whose Home tab should be updated."
@@ -76,7 +70,7 @@ public class Publish extends AbstractSlackClientConnection implements RunnableTa
     )
     @NotNull
     @PluginProperty(group = "main")
-    private Property<String> view;
+    private Property<Map<String, Object>> view;
 
     @Schema(
         title = "View hash to prevent concurrent overwrites",
@@ -86,38 +80,14 @@ public class Publish extends AbstractSlackClientConnection implements RunnableTa
     private Property<String> hash;
 
     @Override
-    public Output run(RunContext runContext) throws Exception {
+    public ViewOutput run(RunContext runContext) throws Exception {
         var builder = ViewsPublishRequest.builder()
-            .userId(runContext.render(this.userId).as(String.class).orElseThrow(() -> new IllegalArgumentException("'userId' rendered to an empty value")))
-            .viewAsString(runContext.render(this.view).as(String.class).orElseThrow(() -> new IllegalArgumentException("'view' rendered to an empty value")));
+            .userId(runContext.render(this.userId).as(String.class).filter(value -> !value.isBlank()).orElseThrow(() -> new IllegalArgumentException("'userId' rendered to an empty value")))
+            .viewAsString(JacksonMapper.ofJson().writeValueAsString(runContext.render(this.view).asMap(String.class, Object.class)));
 
-        if (this.hash != null) {
-            runContext.render(this.hash).as(String.class).ifPresent(builder::hash);
-        }
+        runContext.render(this.hash).as(String.class).ifPresent(builder::hash);
 
         var response = call(runContext, client -> client.viewsPublish(builder.build()));
-        var view = response.getView();
-
-        if (view == null) {
-            throw new IllegalStateException("Slack returned no view in the publish response");
-        }
-
-        return Output.builder()
-            .viewId(view.getId())
-            .hash(view.getHash())
-            .build();
-    }
-
-    @Value
-    @Builder
-    @Jacksonized
-    public static class Output implements io.kestra.core.models.tasks.Output {
-        @Schema(title = "View ID")
-        @PluginProperty
-        String viewId;
-
-        @Schema(title = "View hash")
-        @PluginProperty
-        String hash;
+        return ViewOutput.from(response.getView());
     }
 }

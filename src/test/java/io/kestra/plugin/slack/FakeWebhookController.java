@@ -220,9 +220,11 @@ public class FakeWebhookController {
     public HttpResponse<?> mockPost(HttpRequest<?> request, String method, @Body String data) {
         FakeWebhookController.data = data;
 
-        // Mock views.open and views.publish responses
         if (method.equals("views.open") || method.equals("views.publish")) {
-            if (data.contains("force_error")) {
+            if (
+                (method.equals("views.open") && data.contains("trigger_id=force_error"))
+                    || (method.equals("views.publish") && data.contains("user_id=force_error"))
+            ) {
                 return HttpResponse.ok(convertToSlack(Map.of("ok", false, "error", "invalid_view")));
             }
             return HttpResponse.ok(
