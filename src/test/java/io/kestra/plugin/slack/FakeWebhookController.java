@@ -239,6 +239,7 @@ public class FakeWebhookController {
                 )
             );
         }
+
         // Mock canvas method responses
         if (method.contains("canvases")) {
             if (method.contains("create") && !method.contains("conversations")) {

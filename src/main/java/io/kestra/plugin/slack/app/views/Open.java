@@ -12,6 +12,7 @@ import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.plugin.slack.AbstractSlackClientConnection;
+import io.kestra.plugin.slack.app.models.ViewOutput;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
@@ -82,7 +83,7 @@ public class Open extends AbstractSlackClientConnection implements RunnableTask<
     public ViewOutput run(RunContext runContext) throws Exception {
         var request = ViewsOpenRequest.builder()
             .triggerId(
-                runContext.render(this.triggerId).as(String.class).filter(value -> !value.isBlank()).orElseThrow(() -> new IllegalArgumentException("'triggerId' rendered to an empty value"))
+                runContext.render(this.triggerId).as(String.class).filter(value -> !value.isBlank()).orElseThrow(() -> new IllegalArgumentException("'triggerId' rendered to an empty value, pass the trigger_id from the Slack interaction payload"))
             )
             .viewAsString(JacksonMapper.ofJson().writeValueAsString(runContext.render(this.view).asMap(String.class, Object.class)))
             .build();

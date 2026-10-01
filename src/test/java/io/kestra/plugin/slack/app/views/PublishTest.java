@@ -1,5 +1,7 @@
 package io.kestra.plugin.slack.app.views;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -25,7 +27,7 @@ public class PublishTest extends AbstractSlackClientTest {
 
     @Test
     void run() throws Exception {
-        Publish task = Publish.builder()
+        var task = Publish.builder()
             .id(IdUtils.create())
             .type(Publish.class.getName())
             .methodsEndpointUrlPrefix(this.client())
@@ -35,7 +37,7 @@ public class PublishTest extends AbstractSlackClientTest {
             .view(Property.ofValue(homeView()))
             .build();
 
-        ViewOutput output = task.run(
+        var output = task.run(
             TestsUtils.mockRunContext(runContextFactory, task, Map.of())
         );
 
@@ -44,12 +46,12 @@ public class PublishTest extends AbstractSlackClientTest {
         assertThat(output.getHash()).isEqualTo("hash123");
         assertThat(FakeWebhookController.data).contains("user_id=U1234567890");
         assertThat(FakeWebhookController.data).contains("hash=hash123");
-        assertThat(FakeWebhookController.data).contains("view=");
+        assertThat(URLDecoder.decode(FakeWebhookController.data, StandardCharsets.UTF_8)).contains("\"type\":\"home\"");
     }
 
     @Test
     void runWithoutHash() throws Exception {
-        Publish task = Publish.builder()
+        var task = Publish.builder()
             .id(IdUtils.create())
             .type(Publish.class.getName())
             .methodsEndpointUrlPrefix(this.client())
@@ -58,7 +60,7 @@ public class PublishTest extends AbstractSlackClientTest {
             .view(Property.ofValue(homeView()))
             .build();
 
-        ViewOutput output = task.run(
+        var output = task.run(
             TestsUtils.mockRunContext(runContextFactory, task, Map.of())
         );
 
@@ -68,8 +70,25 @@ public class PublishTest extends AbstractSlackClientTest {
     }
 
     @Test
+    void runWithBlankHash() throws Exception {
+        var task = Publish.builder()
+            .id(IdUtils.create())
+            .type(Publish.class.getName())
+            .methodsEndpointUrlPrefix(this.client())
+            .token(Property.ofValue("token"))
+            .userId(Property.ofValue("U1234567890"))
+            .hash(Property.ofValue("   "))
+            .view(Property.ofValue(homeView()))
+            .build();
+
+        task.run(TestsUtils.mockRunContext(runContextFactory, task, Map.of()));
+
+        assertThat(FakeWebhookController.data).doesNotContain("hash=");
+    }
+
+    @Test
     void failsWhenUserIdIsBlank() {
-        Publish task = Publish.builder()
+        var task = Publish.builder()
             .id(IdUtils.create())
             .type(Publish.class.getName())
             .methodsEndpointUrlPrefix(this.client())
@@ -89,7 +108,7 @@ public class PublishTest extends AbstractSlackClientTest {
 
     @Test
     void failsWhenSlackReturnsError() throws Exception {
-        Publish task = Publish.builder()
+        var task = Publish.builder()
             .id(IdUtils.create())
             .type(Publish.class.getName())
             .methodsEndpointUrlPrefix(this.client())

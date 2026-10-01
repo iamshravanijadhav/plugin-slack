@@ -12,6 +12,7 @@ import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.plugin.slack.AbstractSlackClientConnection;
+import io.kestra.plugin.slack.app.models.ViewOutput;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
@@ -82,10 +83,10 @@ public class Publish extends AbstractSlackClientConnection implements RunnableTa
     @Override
     public ViewOutput run(RunContext runContext) throws Exception {
         var builder = ViewsPublishRequest.builder()
-            .userId(runContext.render(this.userId).as(String.class).filter(value -> !value.isBlank()).orElseThrow(() -> new IllegalArgumentException("'userId' rendered to an empty value")))
+            .userId(runContext.render(this.userId).as(String.class).filter(value -> !value.isBlank()).orElseThrow(() -> new IllegalArgumentException("'userId' rendered to an empty value, pass the Slack user ID (for example U1234567890)")))
             .viewAsString(JacksonMapper.ofJson().writeValueAsString(runContext.render(this.view).asMap(String.class, Object.class)));
 
-        runContext.render(this.hash).as(String.class).ifPresent(builder::hash);
+        runContext.render(this.hash).as(String.class).filter(value -> !value.isBlank()).ifPresent(builder::hash);
 
         var response = call(runContext, client -> client.viewsPublish(builder.build()));
         return ViewOutput.from(response.getView());
